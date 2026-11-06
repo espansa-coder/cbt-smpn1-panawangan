@@ -1,0 +1,240 @@
+
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Pengujian API - CBT SMPN 1 Panawangan</title>
+
+  <style>
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      padding: 25px;
+      background: #f2f6fc;
+      font-family: Arial, sans-serif;
+      color: #24344b;
+    }
+
+    .container {
+      max-width: 620px;
+      margin: 45px auto;
+      padding: 28px;
+      background: white;
+      border-radius: 16px;
+      box-shadow: 0 8px 30px rgba(20, 45, 80, .08);
+    }
+
+    h1 {
+      color: #102b50;
+      font-size: 23px;
+    }
+
+    .description {
+      color: #718096;
+      line-height: 1.6;
+      font-size: 14px;
+    }
+
+    .status {
+      margin-top: 22px;
+      padding: 18px;
+      border-radius: 10px;
+      background: #edf2f7;
+      font-weight: bold;
+    }
+
+    .success {
+      background: #e8f7ee;
+      color: #187447;
+    }
+
+    .error {
+      background: #fff0f0;
+      color: #b42318;
+    }
+
+    .loading {
+      background: #fff7e6;
+      color: #936000;
+    }
+
+    pre {
+      white-space: pre-wrap;
+      overflow-wrap: anywhere;
+      padding: 15px;
+      background: #f4f6f9;
+      border-radius: 9px;
+      font-size: 12px;
+      line-height: 1.6;
+    }
+
+    button {
+      border: 0;
+      background: #1765c0;
+      color: white;
+      padding: 12px 18px;
+      border-radius: 8px;
+      cursor: pointer;
+      font-weight: bold;
+    }
+
+    button:disabled {
+      opacity: .6;
+      cursor: wait;
+    }
+
+    a {
+      display: inline-block;
+      margin-top: 20px;
+      color: #1765c0;
+      text-decoration: none;
+    }
+  </style>
+</head>
+
+<body>
+
+  <main class="container">
+
+    <h1>Pengujian Backend CBT</h1>
+
+    <p class="description">
+      Halaman ini menguji komunikasi antara GitHub Pages
+      dan Google Apps Script CBT tingkat VII.
+    </p>
+
+    <div id="status" class="status loading">
+      Menghubungkan ke backend CBT_VII...
+    </div>
+
+    <h3>Informasi respons server</h3>
+
+    <pre id="result">Menunggu respons server...</pre>
+
+    <button id="retry" onclick="testConnection()">
+      Ulangi Pengujian
+    </button>
+
+    <br>
+
+    <a href="./">← Kembali ke halaman utama CBT</a>
+
+  </main>
+
+  <script>
+    "use strict";
+
+    const API_URL =
+      "https://script.google.com/macros/s/AKfycbzsMdJySCcTAmB9Ev5tLtcJMSocYnLK9Yf2TDItFcWSuT4VbN5zHxQJSw_Ai7VRdRfpEA/exec";
+
+    let requestTimer = null;
+    let activeScript = null;
+
+    function showStatus(message, type) {
+      const element = document.getElementById("status");
+      element.textContent = message;
+      element.className = "status " + type;
+    }
+
+    function finishTest() {
+      clearTimeout(requestTimer);
+
+      if (activeScript) {
+        activeScript.remove();
+        activeScript = null;
+      }
+
+      document.getElementById("retry").disabled = false;
+    }
+
+    // Callback harus menggunakan nama yang sama
+    // dengan callback pada fungsi doGet Apps Script.
+    window.cbtHealthCallback = function(data) {
+
+      finishTest();
+
+      document.getElementById("result").textContent =
+        JSON.stringify(data, null, 2);
+
+      if (
+        data &&
+        data.success === true &&
+        data.status === "ONLINE" &&
+        data.level === "VII" &&
+        data.database === "CONFIGURED"
+      ) {
+        showStatus(
+          "BERHASIL: Browser terhubung dengan backend CBT_VII.",
+          "success"
+        );
+      } else {
+        showStatus(
+          "Respons diterima, tetapi status backend belum sesuai.",
+          "error"
+        );
+      }
+    };
+
+    function testConnection() {
+
+      finishTest();
+
+      document.getElementById("retry").disabled = true;
+
+      document.getElementById("result").textContent =
+        "Sedang menghubungi Apps Script...";
+
+      showStatus(
+        "Menghubungkan ke backend CBT_VII...",
+        "loading"
+      );
+
+      const script = document.createElement("script");
+
+      activeScript = script;
+
+      script.src =
+        API_URL +
+        "?action=health&callback=cbtHealthCallback&_=" +
+        Date.now();
+
+      script.onerror = function() {
+
+        finishTest();
+
+        showStatus(
+          "Gagal memuat respons backend. Periksa deployment dan URL.",
+          "error"
+        );
+
+        document.getElementById("result").textContent =
+          "Browser tidak berhasil memuat script respons dari backend.";
+
+      };
+
+      requestTimer = setTimeout(function() {
+
+        finishTest();
+
+        showStatus(
+          "Waktu pengujian habis. Backend tidak memberikan respons.",
+          "error"
+        );
+
+        document.getElementById("result").textContent =
+          "Timeout: tidak ada respons dalam 15 detik.";
+
+      }, 15000);
+
+      document.body.appendChild(script);
+    }
+
+    document.addEventListener("DOMContentLoaded", testConnection);
+  </script>
+
+</body>
+</html>
