@@ -101,6 +101,17 @@ const statusElement = document.getElementById("status");
 const resultElement = document.getElementById("result");
 const buttonElement = document.getElementById("testButton");
 const responseFrame = document.getElementById("responseFrame");
+  responseFrame.addEventListener("load", function() {
+  console.log("Iframe CBT menerima halaman respons.");
+  console.log("URL iframe:", responseFrame.src);
+
+  if (currentNonce) {
+    showStatus(
+      "Halaman respons iframe sudah dimuat. Menunggu pesan balasan...",
+      ""
+    );
+  }
+});
 
 function showStatus(message, type) {
   statusElement.textContent = message;
