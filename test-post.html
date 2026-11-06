@@ -107,10 +107,11 @@ function finishTest() {
 }
 
 window.addEventListener("message", function(event) {
-  // Hanya terima pesan dari iframe yang kita buat.
-  if (event.source !== responseFrame.contentWindow) return;
-
+  // Pesan harus memiliki format dan nonce pengujian yang benar.
   const data = event.data;
+
+  if (!data || data.type !== "CBT_POST_TEST") return;
+  if (!currentNonce || data.nonce !== currentNonce) return;
 
   if (!data || data.type !== "CBT_POST_TEST") return;
   if (!currentNonce || data.nonce !== currentNonce) return;
