@@ -1,0 +1,188 @@
+
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>CBT - Pengujian POST</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background: #f2f6fc;
+      padding: 25px;
+      color: #24344b;
+    }
+    main {
+      max-width: 600px;
+      margin: 45px auto;
+      background: white;
+      padding: 28px;
+      border-radius: 14px;
+      box-shadow: 0 8px 25px rgba(0,0,0,.07);
+    }
+    .status {
+      padding: 16px;
+      border-radius: 9px;
+      background: #fff7e6;
+      color: #936000;
+      line-height: 1.5;
+    }
+    .success {
+      background: #e8f7ee;
+      color: #187447;
+    }
+    .error {
+      background: #fff0f0;
+      color: #b42318;
+    }
+    button {
+      padding: 12px 18px;
+      border: 0;
+      border-radius: 8px;
+      color: white;
+      background: #1765c0;
+      cursor: pointer;
+    }
+    button:disabled {
+      opacity: .6;
+    }
+    pre {
+      background: #f4f6f9;
+      padding: 14px;
+      white-space: pre-wrap;
+      overflow-wrap: anywhere;
+      border-radius: 8px;
+    }
+  </style>
+</head>
+<body>
+
+<main>
+  <h2>Pengujian POST CBT_VII</h2>
+  <p>Pengujian pengiriman pesan dari GitHub Pages ke Apps Script.</p>
+
+  <div id="status" class="status">
+    Siap melakukan pengujian.
+  </div>
+
+  <h3>Respons backend</h3>
+  <pre id="result">Belum ada respons.</pre>
+
+  <button id="testButton" onclick="runTest()">
+    Mulai Pengujian POST
+  </button>
+
+  <iframe
+    id="responseFrame"
+    name="responseFrame"
+    title="CBT response"
+    hidden>
+  </iframe>
+</main>
+
+<script>
+"use strict";
+
+const API_URL =
+  "https://script.google.com/macros/s/AKfycbzsMdJySCcTAmB9Ev5tLtcJMSocYnLK9Yf2TDItFcWSuT4VbN5zHxQJSw_Ai7VRdRfpEA/exec";
+
+let currentNonce = null;
+let timeoutId = null;
+
+const statusElement = document.getElementById("status");
+const resultElement = document.getElementById("result");
+const buttonElement = document.getElementById("testButton");
+const responseFrame = document.getElementById("responseFrame");
+
+function showStatus(message, type) {
+  statusElement.textContent = message;
+  statusElement.className = "status " + (type || "");
+}
+
+function finishTest() {
+  clearTimeout(timeoutId);
+  timeoutId = null;
+  currentNonce = null;
+  buttonElement.disabled = false;
+}
+
+window.addEventListener("message", function(event) {
+  // Hanya terima pesan dari iframe yang kita buat.
+  if (event.source !== responseFrame.contentWindow) return;
+
+  const data = event.data;
+
+  if (!data || data.type !== "CBT_POST_TEST") return;
+  if (!currentNonce || data.nonce !== currentNonce) return;
+
+  finishTest();
+
+  resultElement.textContent = JSON.stringify(data, null, 2);
+
+  if (data.success === true && data.level === "VII") {
+    showStatus(
+      "BERHASIL: GitHub Pages dapat mengirim POST ke CBT_VII.",
+      "success"
+    );
+  } else {
+    showStatus(
+      "Respons diterima, tetapi hasil pengujian tidak valid.",
+      "error"
+    );
+  }
+});
+
+function runTest() {
+  if (currentNonce) finishTest();
+
+  buttonElement.disabled = true;
+  resultElement.textContent = "Mengirim permintaan POST...";
+
+  showStatus("Menghubungi backend CBT_VII...", "");
+
+  currentNonce =
+    "cbt_" +
+    Date.now() +
+    "_" +
+    Math.random().toString(36).substring(2, 12);
+
+  const form = document.createElement("form");
+  form.method = "POST";
+  form.action = API_URL;
+  form.target = "responseFrame";
+  form.style.display = "none";
+
+  const fields = {
+    action: "transport_ping",
+    nonce: currentNonce
+  };
+
+  Object.keys(fields).forEach(function(key) {
+    const input = document.createElement("input");
+    input.type = "hidden";
+    input.name = key;
+    input.value = fields[key];
+    form.appendChild(input);
+  });
+
+  document.body.appendChild(form);
+
+  timeoutId = setTimeout(function() {
+    finishTest();
+
+    showStatus(
+      "Timeout: backend tidak memberikan respons POST.",
+      "error"
+    );
+
+    resultElement.textContent =
+      "Tidak menerima pesan balasan dalam 20 detik.";
+  }, 20000);
+
+  form.submit();
+  form.remove();
+}
+</script>
+
+</body>
+</html>
